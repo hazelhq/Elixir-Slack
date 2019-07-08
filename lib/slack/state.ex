@@ -2,6 +2,8 @@ defmodule Slack.State do
   @moduledoc "Slack state"
   @behaviour Access
 
+  require Logger
+
   def fetch(client, key)
   defdelegate fetch(client, key), to: Map
 
@@ -96,8 +98,13 @@ defmodule Slack.State do
     put_in(slack, [:users, user.id], user)
   end
 
-  def update(%{type: "user_change", user: user}, slack) do
+  def update(%{type: "user_change", user: user}, slack) when is_map(user) do
     update_in(slack, [:users, Access.key(user.id, %{})], &Map.merge(&1, user))
+  end
+
+  def update(%{type: "user_change", user: _user} = message, slack) do
+    Logger.info("ignored invalid `user_change` message: #{inspect message}")
+    slack
   end
 
   Enum.map(["bot_added", "bot_changed"], fn (type) ->
